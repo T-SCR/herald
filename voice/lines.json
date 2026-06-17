@@ -1,0 +1,74 @@
+{
+  "stop": {
+    "task_complete": [
+      "All systems nominal. Awaiting your next directive.",
+      "Process concluded. Standing by for further instructions.",
+      "Task sequence complete. Your move.",
+      "Operations complete. Ready for your input.",
+      "Execution finished. I'm at your disposal.",
+      "All tasks resolved. Awaiting your command."
+    ],
+    "needs_input": [
+      "Your attention is required.",
+      "I've reached a decision point. Please advise.",
+      "Standing by. Your input is needed to continue.",
+      "I require your guidance before proceeding.",
+      "A response from you will allow me to continue.",
+      "I'm waiting on you. Take your time."
+    ],
+    "permission_needed": [
+      "Authorization required. Please review and respond.",
+      "Awaiting your clearance to proceed.",
+      "I cannot continue without your explicit approval.",
+      "This action requires your authorization.",
+      "Standing by for your permission."
+    ],
+    "question": [
+      "I have a question for you when you're ready.",
+      "There's something I need clarification on.",
+      "I need your input on a decision."
+    ]
+  },
+  "tool": {
+    "Write": [
+      "File written.",
+      "File updated successfully.",
+      "Modification saved.",
+      "Write operation complete."
+    ],
+    "Edit": [
+      "Edit applied.",
+      "File modified.",
+      "Change committed to disk."
+    ],
+    "Bash": [
+      "Command executed.",
+      "Shell operation complete.",
+      "Process finished."
+    ],
+    "WebFetch": [
+      "Web content retrieved.",
+      "Page fetched successfully."
+    ],
+    "WebSearch": [
+      "Search complete.",
+      "Results retrieved."
+    ],
+    "Agent": [
+      "Subagent dispatched.",
+      "Delegating to a specialist agent."
+    ],
+    "TodoWrite": [
+      "Task list updated.",
+      "Action items recorded."
+    ]
+  },
+  "session": {
+    "start": [
+      "Systems online. Ready to assist.",
+      "All systems go. What are we working on?",
+      "Good to go. Awaiting your directive."
+    ],
+    "summary_prefix": "Session complete."
+  }
+}

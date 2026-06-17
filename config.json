@@ -1,0 +1,39 @@
+{
+  "_comment": "claude-herald config — edit directly or use: herald.ps1 --help",
+
+  "enabled": true,
+
+  "voice": {
+    "enabled": true,
+    "name": "Microsoft David Desktop",
+    "rate": -2,
+    "volume": 90,
+    "_note_rate": "Range: -10 (slowest) to 10 (fastest). -2 gives a deliberate, measured cadence.",
+    "_note_voices": "Run: Get-InstalledVoices.ps1 to list voices on your system."
+  },
+
+  "toast": {
+    "enabled": true,
+    "show_tool_events": false,
+    "_note": "show_tool_events: true = toast for every Write/Edit/Bash. Can get noisy."
+  },
+
+  "mobile": {
+    "enabled": false,
+    "ntfy_server": "https://ntfy.sh",
+    "ntfy_topic": "",
+    "ntfy_token": "",
+    "push_on_complete": false,
+    "_note": "Set ntfy_topic to your unique topic (e.g. 'sharat-claude-abc123'). push_on_complete: push even on task-done (not just attention-needed)."
+  },
+
+  "hooks": {
+    "on_stop": true,
+    "on_tool_use": true
+  },
+
+  "announcements": {
+    "tool_details": true,
+    "_note": "tool_details: true = 'File written — Skills.md' vs just 'File written'"
+  }
+}
