@@ -43,9 +43,9 @@
                               }
                  },
     "mobile":  {
-                   "enabled":  false,
+                   "enabled":  true,
                    "ntfy_server":  "https://ntfy.sh",
-                   "ntfy_topic":  "",
+                   "ntfy_topic":  "sharat-claude",
                    "ntfy_token":  "",
                    "push_on_complete":  false
                },

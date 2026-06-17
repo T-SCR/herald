@@ -22,17 +22,17 @@
 #>
 
 param(
-    [string]$SetInterval,
+    [Alias('set-interval')][string]$SetInterval,
     [switch]$Status,
     [string]$Toggle,
     [switch]$Test,
     [switch]$Packs,
-    [string]$SetPack,
-    [string]$SetVolume,
+    [Alias('set-pack')][string]$SetPack,
+    [Alias('set-volume')][string]$SetVolume,
     [switch]$Profiles,
-    [string]$SetProfile,
-    [string]$SetTopic,
-    [string]$SetVoice,
+    [Alias('set-profile')][string]$SetProfile,
+    [Alias('set-topic')][string]$SetTopic,
+    [Alias('set-voice')][string]$SetVoice,
     [switch]$Voices,
     [switch]$Mute,
     [switch]$Unmute,
