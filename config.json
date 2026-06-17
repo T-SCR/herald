@@ -9,7 +9,9 @@
     "alerts":  {
                    "repeat_enabled":  true,
                    "repeat_interval_seconds":  10,
-                   "_note":  "Repeat sound every N seconds when Claude needs your attention. Stops when you respond."
+                   "_note":  "Repeat sound every N seconds when Claude needs your attention. Stops when you respond.",
+                   "_note2":  "After 45s no reply: push \u0027are you there\u0027, silence local alerts until ntfy reply",
+                   "attention_wait_seconds":  45
                },
     "notify":  {
                    "terminal":  true
@@ -56,5 +58,10 @@
               },
     "announcements":  {
                           "tool_details":  true
-                      }
+                      },
+    "tone":  {
+                 "mode":  "sir",
+                 "name":  "Sharat",
+                 "_note":  "mode: \u0027sir\u0027 = working mode (formal), \u0027friendly\u0027 = uses name. Toggle: .\\herald.ps1 --toggle tone"
+             }
 }
