@@ -36,6 +36,8 @@ param(
     [switch]$Voices,
     [switch]$Mute,
     [switch]$Unmute,
+    [switch]$Leaving,
+    [Alias('home')][switch]$ImHome,
     [switch]$Help
 )
 
@@ -50,7 +52,57 @@ function Write-Status($label, $value) {
 
 $anyFlag = $Status -or $Toggle -or $Test -or $Packs -or $SetPack -or $SetVolume `
            -or $Profiles -or $SetProfile -or $SetTopic -or $SetVoice `
-           -or $Voices -or $Mute -or $Unmute
+           -or $Voices -or $Mute -or $Unmute -or $Leaving -or $ImHome
+
+if ($Leaving) {
+    $cfg = Get-Config
+    $cfg.away_mode = $true
+    Save-Config $cfg
+    $name = if ($cfg.tone.mode -eq "sir") { "sir" } else { $cfg.tone.name }
+    Write-Host "Away mode ON - all events will push to your phone." -ForegroundColor Yellow
+    Write-Host "Local sounds and banners suspended." -ForegroundColor DarkGray
+    # Notify phone
+    if ($cfg.mobile.enabled -and $cfg.mobile.ntfy_topic) {
+        $hdrs = @{ "Title" = "Claude Herald - Away mode on"; "Tags" = "door,wave" }
+        if ($cfg.mobile.ntfy_token) { $hdrs["Authorization"] = "Bearer $($cfg.mobile.ntfy_token)" }
+        try {
+            Invoke-RestMethod -Uri "$($cfg.mobile.ntfy_server)/$($cfg.mobile.ntfy_topic)" `
+                -Method Post -Body "You have left. I will notify you of everything - task completions, questions, and anything that needs your attention." `
+                -Headers $hdrs -ErrorAction Stop | Out-Null
+            Write-Host "Phone notified." -ForegroundColor Green
+        } catch { Write-Host "Could not reach ntfy (offline?)" -ForegroundColor DarkGray }
+    }
+    exit 0
+}
+
+if ($ImHome) {
+    $cfg = Get-Config
+    $cfg.away_mode = $false
+    Save-Config $cfg
+    $name = if ($cfg.tone.mode -eq "sir") { "sir" } else { $cfg.tone.name }
+    Write-Host "Welcome back! Away mode OFF - resuming normal notifications." -ForegroundColor Green
+
+    # Play "Welcome home, sir." - specifically session_start_1.mp3
+    if ($cfg.audio.enabled) {
+        $packDir    = Join-Path $PSScriptRoot "sounds\$($cfg.audio.active_pack)"
+        $welcomeFile = Join-Path $packDir "sounds\session_start_1.mp3"
+        $playScript  = Join-Path $PSScriptRoot "engine\play.ps1"
+        if (Test-Path $welcomeFile) {
+            & $playScript -Path $welcomeFile -Volume ([double]$cfg.audio.volume)
+        }
+    }
+    # Push confirmation to phone
+    if ($cfg.mobile.enabled -and $cfg.mobile.ntfy_topic) {
+        $hdrs = @{ "Title" = "Claude Herald - Welcome back, $name"; "Tags" = "house,tada" }
+        if ($cfg.mobile.ntfy_token) { $hdrs["Authorization"] = "Bearer $($cfg.mobile.ntfy_token)" }
+        try {
+            Invoke-RestMethod -Uri "$($cfg.mobile.ntfy_server)/$($cfg.mobile.ntfy_topic)" `
+                -Method Post -Body "You are back. Switching to home mode - only important alerts will reach your phone now." `
+                -Headers $hdrs -ErrorAction Stop | Out-Null
+        } catch { }
+    }
+    exit 0
+}
 
 if ($Help -or (-not $anyFlag)) {
     Write-Host ""
@@ -60,6 +112,8 @@ if ($Help -or (-not $anyFlag)) {
     Write-Host "Usage:" -ForegroundColor Yellow
     Write-Host "  .\herald.ps1 --status                   All current settings"
     Write-Host "  .\herald.ps1 --test                     Fire all 4 event types now"
+    Write-Host "  .\herald.ps1 --leaving                  Away mode ON  (push everything to phone)"
+    Write-Host "  .\herald.ps1 --home                     Away mode OFF (welcome back + resume local)"
     Write-Host "  .\herald.ps1 --packs                    List installed sound packs"
     Write-Host "  .\herald.ps1 --set-pack <name>          Switch active sound pack"
     Write-Host "  .\herald.ps1 --set-volume 0.0-1.0       Set audio volume"
@@ -87,6 +141,11 @@ if ($Status) {
     Write-Host ""
     Write-Host "claude-herald status" -ForegroundColor Cyan
     Write-Host "--------------------" -ForegroundColor DarkGray
+    $awayLabel = if ($cfg.away_mode) { "[AWAY] All events -> phone" } else { "[HOME] Local + attention push" }
+    $awayColor = if ($cfg.away_mode) { "Yellow" } else { "Green" }
+    Write-Host "  Mode: $awayLabel" -ForegroundColor $awayColor
+    Write-Host "    --leaving / --home to switch" -ForegroundColor DarkGray
+    Write-Host ""
     Write-Status "Master switch        " $cfg.enabled
     Write-Host ""
     Write-Host "  Audio:" -ForegroundColor DarkGray

@@ -63,5 +63,6 @@
                  "mode":  "sir",
                  "name":  "Sharat",
                  "_note":  "mode: \u0027sir\u0027 = working mode (formal), \u0027friendly\u0027 = uses name. Toggle: .\\herald.ps1 --toggle tone"
-             }
+             },
+    "away_mode":  false
 }

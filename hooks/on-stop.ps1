@@ -1,37 +1,40 @@
-﻿<#
+<#
 .SYNOPSIS
-    Claude Code Stop hook - plays sound + terminal banner when Claude finishes.
-    For attention events (permission/question/input): also starts a 10s repeat alert.
+    Claude Code Stop hook.
+    Home mode: sound + banner + push on attention events only.
+    Away mode: push everything, no local sound/banner (nobody's there).
 #>
 
-$root          = Split-Path $PSScriptRoot -Parent
-$configPath    = Join-Path $root "config.json"
-$linesPath     = Join-Path $root "voice\lines.json"
-$notifyScript  = Join-Path $root "engine\notify.ps1"
-$repeatScript  = Join-Path $root "engine\repeat-alert.ps1"
-$pushScript    = Join-Path $root "engine\push.ps1"
-$sentinelFile  = Join-Path $root ".herald-alert"
+$root         = Split-Path $PSScriptRoot -Parent
+$configPath   = Join-Path $root "config.json"
+$linesPath    = Join-Path $root "voice\lines.json"
+$notifyScript = Join-Path $root "engine\notify.ps1"
+$repeatScript = Join-Path $root "engine\repeat-alert.ps1"
+$pushScript   = Join-Path $root "engine\push.ps1"
+$sentinelFile = Join-Path $root ".herald-alert"
 
 if (-not (Test-Path $configPath)) { exit 0 }
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
 if (-not $config.enabled)       { exit 0 }
 if (-not $config.hooks.on_stop) { exit 0 }
 
-$lines = Get-Content $linesPath -Raw | ConvertFrom-Json
+$lines    = Get-Content $linesPath -Raw | ConvertFrom-Json
+$awayMode = [bool]$config.away_mode
+$name     = if ($config.tone.mode -eq "sir") { "sir" } else { $config.tone.name }
 
-# Kill any existing repeat alert before starting a new one
-if (Test-Path $sentinelFile) { Remove-Item $sentinelFile -Force -ErrorAction SilentlyContinue }
+# Clear any existing repeat alert
+[System.IO.File]::Delete($sentinelFile)
+[System.IO.File]::Delete((Join-Path $root ".herald-away"))
 
-# Read hook payload
-$payload = $null
+# Read hook payload and classify stop reason
+$payload     = $null
+$stopReason  = "done"
+$lastMessage = ""
+
 try {
     $raw = $input | Out-String
     if ($raw.Trim()) { $payload = $raw | ConvertFrom-Json }
 } catch { }
-
-# Classify stop reason
-$stopReason  = "done"
-$lastMessage = ""
 
 try {
     if ($payload -and $payload.transcript_path -and (Test-Path $payload.transcript_path)) {
@@ -57,7 +60,6 @@ if ($lastMessage -match '\?\s*$') {
     $stopReason = "done"
 }
 
-# Pick message from voice lines pool
 $lineKey = switch ($stopReason) {
     "done"       { "task_complete" }
     "question"   { "question" }
@@ -68,30 +70,46 @@ $lineKey = switch ($stopReason) {
 $pool    = $lines.stop.$lineKey
 $message = $pool[(Get-Random -Maximum $pool.Count)]
 
-# Fire initial notification
-& $notifyScript -Event $stopReason -Message $message
-
-# For attention events: start repeat alert in background (every 10s)
 $attentionEvents = @("permission", "question", "input")
-if ($stopReason -in $attentionEvents -and $config.alerts.repeat_enabled) {
-    $interval = [int]$config.alerts.repeat_interval_seconds
-    Start-Process powershell -WindowStyle Hidden -ArgumentList @(
-        "-NoProfile", "-NonInteractive",
-        "-File", "`"$repeatScript`"",
-        "-Event", $stopReason,
-        "-IntervalSeconds", $interval
-    )
-}
 
-# Mobile push for attention events
-if ($stopReason -in $attentionEvents) {
-    $priority = if ($stopReason -eq "permission") { "high" } else { "default" }
-    $label    = switch ($stopReason) {
-        "permission" { "Claude - Authorization Required" }
-        "question"   { "Claude - Question" }
-        default      { "Claude - Needs Input" }
+if ($awayMode) {
+    # AWAY MODE: push everything, nothing local
+    $priority = switch ($stopReason) {
+        "permission" { "high" }
+        "question"   { "default" }
+        "input"      { "default" }
+        "done"       { "low" }
+        default      { "low" }
     }
-    & $pushScript -Title $label -Body $message -Priority $priority
-} elseif ($config.mobile.push_on_complete) {
-    & $pushScript -Title "Claude - Done" -Body $message -Priority "low"
+    $pushTitle = switch ($stopReason) {
+        "done"       { "Claude - Done" }
+        "question"   { "Claude - Question for you" }
+        "permission" { "Claude - Authorization Required" }
+        "input"      { "Claude - Needs your input" }
+        default      { "Claude" }
+    }
+    & $pushScript -Title $pushTitle -Body $message -Priority $priority
+
+    # For attention events: also start the are-you-there flow (ntfy based, no local sound)
+    if ($stopReason -in $attentionEvents -and $config.alerts.repeat_enabled) {
+        $interval = [int]$config.alerts.attention_wait_seconds
+        Start-Process powershell -WindowStyle Hidden -ArgumentList @(
+            "-NoProfile", "-NonInteractive",
+            "-File", "`"$repeatScript`"",
+            "-Event", $stopReason
+        )
+    }
+} else {
+    # HOME MODE: local sound + banner, push only on attention events
+    & $notifyScript -Event $stopReason -Message $message
+
+    if ($stopReason -in $attentionEvents -and $config.alerts.repeat_enabled) {
+        Start-Process powershell -WindowStyle Hidden -ArgumentList @(
+            "-NoProfile", "-NonInteractive",
+            "-File", "`"$repeatScript`"",
+            "-Event", $stopReason
+        )
+    } elseif ($config.mobile.push_on_complete) {
+        & $pushScript -Title "Claude - Done" -Body $message -Priority "low"
+    }
 }
