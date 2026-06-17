@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     Smarter attention flow for claude-herald.
-    Wait silently -> "are you there" push -> silence local until ntfy reply.
+    Wait silently -> "are you there" Telegram push -> wait for snooze or user response.
 #>
 param([string]$Event = "input")
 
@@ -9,7 +9,9 @@ $root         = Split-Path $PSScriptRoot -Parent
 $configPath   = Join-Path $root "config.json"
 $sentinelFile = Join-Path $root ".herald-alert"
 $awayFile     = Join-Path $root ".herald-away"
+$snoozeFile   = Join-Path $root ".herald-snooze"
 $playScript   = Join-Path $root "engine\play.ps1"
+$pushScript   = Join-Path $root "engine\push.ps1"
 
 if (-not (Test-Path $configPath)) { exit 0 }
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
@@ -36,46 +38,24 @@ function Invoke-InputSound {
 }
 
 function Invoke-AreYouTherePush {
-    if (-not $config.mobile.enabled -or -not $config.mobile.ntfy_topic) { return }
-    $replyUrl = "$($config.mobile.ntfy_server)/$($config.mobile.reply_topic)"
-    $hdrs = @{
-        "Title"   = "Claude - Are you there, $name?"
-        "Tags"    = "wave,clock2"
-        "Actions" = "http, Yes I am, $replyUrl, method=POST, body=yes; http, Give me a minute, $replyUrl, method=POST, body=later"
-    }
-    if ($config.mobile.ntfy_token) { $hdrs["Authorization"] = "Bearer $($config.mobile.ntfy_token)" }
-    try {
-        Invoke-RestMethod -Uri "$($config.mobile.ntfy_server)/$($config.mobile.ntfy_topic)" `
-            -Method Post -Body "Still here with something for you." `
-            -Headers $hdrs -ErrorAction Stop | Out-Null
-    } catch { }
+    & $pushScript -Title "Claude - Are you there, $name?" `
+        -Body "Still here with something for you. Tap Snooze if you need a few minutes." `
+        -Priority "default"
 }
 
-function Wait-ForNtfyReply {
-    $server     = $config.mobile.ntfy_server
-    $replyTopic = $config.mobile.reply_topic
-    $hdrs = @{}
-    if ($config.mobile.ntfy_token) { $hdrs["Authorization"] = "Bearer $($config.mobile.ntfy_token)" }
-    $since = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-
-    while (Test-Path $sentinelFile) {
-        Start-Sleep -Seconds 5
-        if (-not (Test-Path $sentinelFile)) { return "user-typed" }
-        try {
-            $resp = Invoke-WebRequest -Uri "$server/$replyTopic/json?poll=1&since=$since" `
-                -Headers $hdrs -UseBasicParsing -ErrorAction Stop
-            $msgs = $resp.Content -split "`n" | Where-Object { $_.Trim() } | ForEach-Object {
-                try { $_ | ConvertFrom-Json } catch { $null }
-            } | Where-Object { $_ -and $_.event -eq "message" }
-            foreach ($msg in $msgs) {
-                $since = $msg.time + 1
-                $text  = $msg.message.Trim().ToLower()
-                if ($text -in @("yes","y","yep","yeah","yes i am","im here","i'm here")) { return "yes" }
-                if ($text -in @("no","n","later","give me a minute","busy","in a bit"))   { return "later" }
-            }
-        } catch { }
+function Wait-ForReply {
+    # Watch sentinel + snooze file. reply-listener.ps1 handles the actual Telegram polling.
+    $elapsed = 0
+    $maxWait = 600  # 10 min max before giving up
+    while ((Test-Path $sentinelFile) -and $elapsed -lt $maxWait) {
+        Start-Sleep -Seconds 3
+        $elapsed += 3
+        if (Test-Path $snoozeFile) {
+            Remove-Item $snoozeFile -Force -ErrorAction SilentlyContinue
+            return "later"
+        }
     }
-    return "user-typed"
+    return if (Test-Path $sentinelFile) { "timeout" } else { "user-typed" }
 }
 
 # Write sentinel
@@ -92,11 +72,9 @@ if ($config.notify.terminal) {
 }
 Invoke-AreYouTherePush
 
-# Phase 3: silent - wait for ntfy only
+# Phase 3: wait for reply-listener to signal (paste to terminal = sentinel cleared; snooze = snooze file)
 $PID | Set-Content $awayFile -Force
-
-$result = Wait-ForNtfyReply
-
+$result = Wait-ForReply
 [System.IO.File]::Delete($awayFile)
 
 if ($result -eq "yes" -and (Test-Path $sentinelFile)) {

@@ -1,0 +1,64 @@
+{
+    "enabled":  true,
+    "audio":  {
+                  "enabled":  true,
+                  "active_pack":  "jarvis-mk2",
+                  "volume":  0.6,
+                  "play_on_tool":  false
+              },
+    "alerts":  {
+                   "repeat_enabled":  true,
+                   "repeat_interval_seconds":  10,
+                   "attention_wait_seconds":  45
+               },
+    "notify":  {
+                   "terminal":  true
+               },
+    "toast":  {
+                  "enabled":  true,
+                  "show_tool_events":  false
+              },
+    "voice":  {
+                  "enabled":  false,
+                  "active_profile":  "jarvis"
+              },
+    "profiles":  {
+                     "jarvis":  {
+                                    "name":  "Microsoft David Desktop",
+                                    "rate":  -4,
+                                    "volume":  95,
+                                    "description":  "Slow, deliberate, authoritative"
+                                },
+                     "default":  {
+                                     "name":  "Microsoft David Desktop",
+                                     "rate":  -2,
+                                     "volume":  90,
+                                     "description":  "Measured, professional cadence"
+                                 },
+                     "zira":  {
+                                  "name":  "Microsoft Zira Desktop",
+                                  "rate":  -1,
+                                  "volume":  85,
+                                  "description":  "Female voice, neutral pace"
+                              }
+                 },
+    "mobile":  {
+                   "enabled":  false,
+                   "push_on_complete":  false,
+                   "telegram_bot_token":  "",
+                   "telegram_chat_id":  ""
+               },
+    "hooks":  {
+                  "on_stop":  true,
+                  "on_tool_use":  true
+              },
+    "announcements":  {
+                          "tool_details":  true
+                      },
+    "tone":  {
+                 "mode":  "sir",
+                 "name":  "YourName",
+                 "_note":  "mode: 'sir' = formal, 'friendly' = uses name. Toggle: .\\herald.ps1 --toggle tone"
+             },
+    "away_mode":  false
+}

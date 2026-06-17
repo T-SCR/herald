@@ -2,7 +2,9 @@
 .SYNOPSIS
     Claude Code Stop hook.
     Home mode: sound + banner + push on attention events only.
-    Away mode: push everything, no local sound/banner (nobody's there).
+    Away mode: push Claude's actual response to Telegram for every stop — creates a
+               two-way conversation loop (user replies in Telegram, reply-listener
+               pastes the reply back into the Claude terminal).
 #>
 
 $root         = Split-Path $PSScriptRoot -Parent
@@ -26,9 +28,8 @@ $name     = if ($config.tone.mode -eq "sir") { "sir" } else { $config.tone.name 
 [System.IO.File]::Delete($sentinelFile)
 [System.IO.File]::Delete((Join-Path $root ".herald-away"))
 
-# Read hook payload and classify stop reason
+# Read hook payload and extract last assistant message
 $payload     = $null
-$stopReason  = "done"
 $lastMessage = ""
 
 try {
@@ -50,14 +51,15 @@ try {
     }
 } catch { }
 
-if ($lastMessage -match '\?\s*$') {
-    $stopReason = "question"
+# Classify stop reason
+$stopReason = if ($lastMessage -match '\?\s*$') {
+    "question"
 } elseif ($lastMessage -match '(?i)(permission|allow|approve|authorize|confirm|deny|block)') {
-    $stopReason = "permission"
+    "permission"
 } elseif ($lastMessage -match '(?i)(need|require|waiting|please|input|respond|clarif)') {
-    $stopReason = "input"
+    "input"
 } else {
-    $stopReason = "done"
+    "done"
 }
 
 $lineKey = switch ($stopReason) {
@@ -67,13 +69,14 @@ $lineKey = switch ($stopReason) {
     "input"      { "needs_input" }
     default      { "task_complete" }
 }
-$pool    = $lines.stop.$lineKey
-$message = $pool[(Get-Random -Maximum $pool.Count)]
+$pool         = $lines.stop.$lineKey
+$voiceLine    = $pool[(Get-Random -Maximum $pool.Count)]
 
 $attentionEvents = @("permission", "question", "input")
 
 if ($awayMode) {
-    # AWAY MODE: push everything, nothing local
+    # AWAY MODE: push Claude's actual response to Telegram — no local sound/banner.
+    # push.ps1 handles chunking for long messages. User can reply in Telegram to continue.
     $priority = switch ($stopReason) {
         "permission" { "high" }
         "question"   { "default" }
@@ -88,11 +91,11 @@ if ($awayMode) {
         "input"      { "Claude - Needs your input" }
         default      { "Claude" }
     }
-    & $pushScript -Title $pushTitle -Body $message -Priority $priority
+    $pushBody = if ($lastMessage) { $lastMessage.Trim() } else { $voiceLine }
+    & $pushScript -Title $pushTitle -Body $pushBody -Priority $priority
 
-    # For attention events: also start the are-you-there flow (ntfy based, no local sound)
+    # Start are-you-there attention flow for events that need a response
     if ($stopReason -in $attentionEvents -and $config.alerts.repeat_enabled) {
-        $interval = [int]$config.alerts.attention_wait_seconds
         Start-Process powershell -WindowStyle Hidden -ArgumentList @(
             "-NoProfile", "-NonInteractive",
             "-File", "`"$repeatScript`"",
@@ -100,8 +103,8 @@ if ($awayMode) {
         )
     }
 } else {
-    # HOME MODE: local sound + banner, push only on attention events
-    & $notifyScript -Event $stopReason -Message $message
+    # HOME MODE: local sound + banner, push to phone only on attention events
+    & $notifyScript -Event $stopReason -Message $voiceLine
 
     if ($stopReason -in $attentionEvents -and $config.alerts.repeat_enabled) {
         Start-Process powershell -WindowStyle Hidden -ArgumentList @(
@@ -110,6 +113,6 @@ if ($awayMode) {
             "-Event", $stopReason
         )
     } elseif ($config.mobile.push_on_complete) {
-        & $pushScript -Title "Claude - Done" -Body $message -Priority "low"
+        & $pushScript -Title "Claude - Done" -Body $voiceLine -Priority "low"
     }
 }

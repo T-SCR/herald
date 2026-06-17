@@ -3,3 +3,7 @@ herald.log
 .reply-listener-pid
 engine/.herald-alert
 engine/.herald-away
+config.json
+.bridge-pid
+.detected-chatid
+.herald-snooze

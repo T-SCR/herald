@@ -38,6 +38,9 @@ param(
     [switch]$Unmute,
     [switch]$Leaving,
     [Alias('home')][switch]$ImHome,
+    [switch]$SetupTelegram,
+    [switch]$Bridge,
+    [switch]$StopBridge,
     [switch]$Help
 )
 
@@ -52,7 +55,8 @@ function Write-Status($label, $value) {
 
 $anyFlag = $Status -or $Toggle -or $Test -or $Packs -or $SetPack -or $SetVolume `
            -or $Profiles -or $SetProfile -or $SetTopic -or $SetVoice `
-           -or $Voices -or $Mute -or $Unmute -or $Leaving -or $ImHome
+           -or $Voices -or $Mute -or $Unmute -or $Leaving -or $ImHome -or $SetupTelegram `
+           -or $Bridge -or $StopBridge
 
 if ($Leaving) {
     $cfg = Get-Config
@@ -61,16 +65,37 @@ if ($Leaving) {
     $name = if ($cfg.tone.mode -eq "sir") { "sir" } else { $cfg.tone.name }
     Write-Host "Away mode ON - all events will push to your phone." -ForegroundColor Yellow
     Write-Host "Local sounds and banners suspended." -ForegroundColor DarkGray
-    # Notify phone
-    if ($cfg.mobile.enabled -and $cfg.mobile.ntfy_topic) {
-        $hdrs = @{ "Title" = "Claude Herald - Away mode on"; "Tags" = "door,wave" }
-        if ($cfg.mobile.ntfy_token) { $hdrs["Authorization"] = "Bearer $($cfg.mobile.ntfy_token)" }
-        try {
-            Invoke-RestMethod -Uri "$($cfg.mobile.ntfy_server)/$($cfg.mobile.ntfy_topic)" `
-                -Method Post -Body "You have left. I will notify you of everything - task completions, questions, and anything that needs your attention." `
-                -Headers $hdrs -ErrorAction Stop | Out-Null
-            Write-Host "Phone notified." -ForegroundColor Green
-        } catch { Write-Host "Could not reach ntfy (offline?)" -ForegroundColor DarkGray }
+
+    # Notify phone via Telegram
+    if ($cfg.mobile.enabled -and $cfg.mobile.telegram_bot_token -and $cfg.mobile.telegram_chat_id) {
+        $pushScript = Join-Path $PSScriptRoot "engine\push.ps1"
+        & $pushScript -Title "Claude Herald - Away mode on" `
+            -Body "You have left. I will push everything to your phone — task completions, questions, and anything that needs your attention." `
+            -Priority "default"
+        Write-Host "Phone notified via Telegram." -ForegroundColor Green
+    } elseif ($cfg.mobile.enabled) {
+        Write-Host "Telegram not configured. Run: .\herald.ps1 --setup-telegram" -ForegroundColor Yellow
+    }
+
+    # Start reply-listener now so it's ready before the first question arrives
+    if ($cfg.mobile.enabled -and $cfg.mobile.telegram_bot_token) {
+        $pidFile        = Join-Path $PSScriptRoot ".reply-listener-pid"
+        $listenerScript = Join-Path $PSScriptRoot "engine\reply-listener.ps1"
+        $isRunning      = $false
+        if (Test-Path $pidFile) {
+            $savedPid = (Get-Content $pidFile -Raw -ErrorAction SilentlyContinue).Trim()
+            if ($savedPid -and (Get-Process -Id ([int]$savedPid) -ErrorAction SilentlyContinue)) {
+                $isRunning = $true
+            }
+        }
+        if (-not $isRunning) {
+            Start-Process powershell -WindowStyle Hidden -ArgumentList @(
+                "-NoProfile", "-NonInteractive", "-File", "`"$listenerScript`""
+            )
+            Write-Host "Reply listener started - phone replies will paste into Claude." -ForegroundColor DarkGray
+        } else {
+            Write-Host "Reply listener already running." -ForegroundColor DarkGray
+        }
     }
     exit 0
 }
@@ -82,24 +107,144 @@ if ($ImHome) {
     $name = if ($cfg.tone.mode -eq "sir") { "sir" } else { $cfg.tone.name }
     Write-Host "Welcome back! Away mode OFF - resuming normal notifications." -ForegroundColor Green
 
-    # Play "Welcome home, sir." - specifically session_start_1.mp3
+    # Play "Welcome home, sir."
     if ($cfg.audio.enabled) {
-        $packDir    = Join-Path $PSScriptRoot "sounds\$($cfg.audio.active_pack)"
+        $packDir     = Join-Path $PSScriptRoot "sounds\$($cfg.audio.active_pack)"
         $welcomeFile = Join-Path $packDir "sounds\session_start_1.mp3"
         $playScript  = Join-Path $PSScriptRoot "engine\play.ps1"
         if (Test-Path $welcomeFile) {
             & $playScript -Path $welcomeFile -Volume ([double]$cfg.audio.volume)
         }
     }
-    # Push confirmation to phone
-    if ($cfg.mobile.enabled -and $cfg.mobile.ntfy_topic) {
-        $hdrs = @{ "Title" = "Claude Herald - Welcome back, $name"; "Tags" = "house,tada" }
-        if ($cfg.mobile.ntfy_token) { $hdrs["Authorization"] = "Bearer $($cfg.mobile.ntfy_token)" }
+
+    # Push confirmation via Telegram
+    if ($cfg.mobile.enabled -and $cfg.mobile.telegram_bot_token -and $cfg.mobile.telegram_chat_id) {
+        $pushScript = Join-Path $PSScriptRoot "engine\push.ps1"
+        & $pushScript -Title "Claude Herald - Welcome back, $name" `
+            -Body "You are back. Switching to home mode - only important alerts will reach your phone now." `
+            -Priority "low"
+    }
+    exit 0
+}
+
+if ($SetupTelegram) {
+    Write-Host ""
+    Write-Host "Telegram Bot Setup" -ForegroundColor Cyan
+    Write-Host "------------------" -ForegroundColor DarkGray
+    Write-Host "1. Open Telegram and message @BotFather"
+    Write-Host "2. Send: /newbot  (follow prompts to name your bot)"
+    Write-Host "3. BotFather will give you a token like: 1234567890:ABCdef..."
+    Write-Host ""
+    $token = Read-Host "Paste your bot token"
+    if ([string]::IsNullOrWhiteSpace($token)) { Write-Host "Cancelled." -ForegroundColor Red; exit 1 }
+
+    $cfg = Get-Config
+    $cfg.mobile.telegram_bot_token = $token.Trim()
+    Save-Config $cfg
+
+    Write-Host ""
+    Write-Host "Token saved. Now send ANY message to your bot in Telegram." -ForegroundColor Yellow
+    Write-Host "Waiting up to 60 seconds..." -ForegroundColor DarkGray
+
+    $baseUrl = "https://api.telegram.org/bot$($token.Trim())"
+    $found   = $false
+    for ($i = 0; $i -lt 12; $i++) {
+        Start-Sleep -Seconds 5
         try {
-            Invoke-RestMethod -Uri "$($cfg.mobile.ntfy_server)/$($cfg.mobile.ntfy_topic)" `
-                -Method Post -Body "You are back. Switching to home mode - only important alerts will reach your phone now." `
-                -Headers $hdrs -ErrorAction Stop | Out-Null
-        } catch { }
+            $resp = Invoke-RestMethod -Uri "$baseUrl/getUpdates?timeout=0" -ErrorAction Stop
+            foreach ($upd in $resp.result) {
+                $cid = $null
+                if ($upd.message)            { $cid = [string]$upd.message.chat.id }
+                elseif ($upd.callback_query) { $cid = [string]$upd.callback_query.message.chat.id }
+                if ($cid) {
+                    $cfg = Get-Config
+                    $cfg.mobile.telegram_chat_id = $cid
+                    $cfg.mobile.enabled = $true
+                    Save-Config $cfg
+                    Write-Host "Chat ID detected: $cid" -ForegroundColor Green
+
+                    # Send confirmation
+                    $body = @{ chat_id = $cid; text = "Herald connected! I will push Claude events here when you are away." } | ConvertTo-Json -Compress
+                    Invoke-RestMethod -Uri "$baseUrl/sendMessage" -Method Post `
+                        -Body $body -ContentType "application/json" -ErrorAction SilentlyContinue | Out-Null
+
+                    Write-Host ""
+                    Write-Host "Setup complete." -ForegroundColor Green
+                    Write-Host "Run: .\herald.ps1 --leaving   to activate away mode" -ForegroundColor DarkGray
+                    $found = $true
+                    break
+                }
+            }
+        } catch {
+            Write-Host "Error contacting Telegram: $_" -ForegroundColor Red
+            break
+        }
+        if ($found) { break }
+    }
+    if (-not $found) {
+        Write-Host "No message detected. Make sure you sent a message to the bot and try again." -ForegroundColor Red
+    }
+    exit 0
+}
+
+if ($StopBridge) {
+    $pidFile = Join-Path $PSScriptRoot ".bridge-pid"
+    if (Test-Path $pidFile) {
+        $savedPid = (Get-Content $pidFile -Raw).Trim()
+        $proc = Get-Process -Id ([int]$savedPid) -ErrorAction SilentlyContinue
+        if ($proc) {
+            Stop-Process -Id ([int]$savedPid) -Force
+            Write-Host "Bridge stopped (PID $savedPid)." -ForegroundColor Yellow
+        } else {
+            Write-Host "Bridge process not found (stale PID)." -ForegroundColor DarkGray
+        }
+        Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+    } else {
+        Write-Host "Bridge is not running." -ForegroundColor DarkGray
+    }
+    exit 0
+}
+
+if ($Bridge) {
+    # Stop reply-listener — bridge handles all Telegram polling
+    $rlPid = Join-Path $PSScriptRoot ".reply-listener-pid"
+    if (Test-Path $rlPid) {
+        $savedPid = (Get-Content $rlPid -Raw -ErrorAction SilentlyContinue).Trim()
+        if ($savedPid -and (Get-Process -Id ([int]$savedPid) -ErrorAction SilentlyContinue)) {
+            Stop-Process -Id ([int]$savedPid) -Force -ErrorAction SilentlyContinue
+            Write-Host "Reply listener stopped (bridge takes over)." -ForegroundColor DarkGray
+        }
+        Remove-Item $rlPid -Force -ErrorAction SilentlyContinue
+    }
+
+    # Check Python
+    $py = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $py) {
+        Write-Host "Python not found. Install Python 3.8+ and run: pip install anthropic requests" -ForegroundColor Red
+        exit 1
+    }
+
+    # Check ANTHROPIC_API_KEY
+    if (-not $env:ANTHROPIC_API_KEY) {
+        Write-Host "ANTHROPIC_API_KEY not set." -ForegroundColor Red
+        Write-Host 'Set it with: $env:ANTHROPIC_API_KEY = "sk-ant-..."' -ForegroundColor Yellow
+        exit 1
+    }
+
+    $bridgeScript = Join-Path $PSScriptRoot "engine\telegram-claude-bridge.py"
+    $pyExe        = "C:\Python313\python.exe"
+    if (-not (Test-Path $pyExe)) { $pyExe = "python" }
+    Write-Host "Starting Herald Claude Bridge..." -ForegroundColor Cyan
+    Start-Process $pyExe -ArgumentList "`"$bridgeScript`"" -WindowStyle Hidden
+    Start-Sleep -Seconds 2
+
+    $pidFile = Join-Path $PSScriptRoot ".bridge-pid"
+    if (Test-Path $pidFile) {
+        $pid = (Get-Content $pidFile -Raw).Trim()
+        Write-Host "Bridge running (PID $pid). Check Telegram." -ForegroundColor Green
+        Write-Host "Stop with: .\herald.ps1 --stop-bridge" -ForegroundColor DarkGray
+    } else {
+        Write-Host "Bridge may have failed to start. Check herald.log" -ForegroundColor Red
     }
     exit 0
 }
@@ -112,14 +257,16 @@ if ($Help -or (-not $anyFlag)) {
     Write-Host "Usage:" -ForegroundColor Yellow
     Write-Host "  .\herald.ps1 --status                   All current settings"
     Write-Host "  .\herald.ps1 --test                     Fire all 4 event types now"
-    Write-Host "  .\herald.ps1 --leaving                  Away mode ON  (push everything to phone)"
+    Write-Host "  .\herald.ps1 --leaving                  Away mode ON  (push everything to Telegram)"
     Write-Host "  .\herald.ps1 --home                     Away mode OFF (welcome back + resume local)"
+    Write-Host "  .\herald.ps1 --setup-telegram           Connect Telegram bot (guided)"
+    Write-Host "  .\herald.ps1 --bridge                   Start Claude agent in Telegram"
+    Write-Host "  .\herald.ps1 --stop-bridge              Stop the Telegram Claude agent"
     Write-Host "  .\herald.ps1 --packs                    List installed sound packs"
     Write-Host "  .\herald.ps1 --set-pack <name>          Switch active sound pack"
     Write-Host "  .\herald.ps1 --set-volume 0.0-1.0       Set audio volume"
     Write-Host "  .\herald.ps1 --toggle <feature>         Toggle on/off"
     Write-Host "  .\herald.ps1 --mute / --unmute          Quick audio mute"
-    Write-Host "  .\herald.ps1 --set-topic <topic>        Enable mobile push (ntfy.sh)"
     Write-Host "  .\herald.ps1 --voices                   List installed TTS voices"
     Write-Host "  .\herald.ps1 --set-profile <name>       Switch TTS voice profile"
     Write-Host ""
@@ -128,10 +275,10 @@ if ($Help -or (-not $anyFlag)) {
     Write-Host "  terminal      Styled banner in Claude terminal [default: ON]"
     Write-Host "  toast         Windows toast popups             [default: ON]"
     Write-Host "  voice         TTS voice (off by default)       [default: OFF]"
-    Write-Host "  mobile        Phone push via ntfy.sh           [default: OFF]"
+    Write-Host "  mobile        Telegram push (away mode)        [default: OFF]"
     Write-Host "  play-on-tool  Play sound on tool events        [default: OFF]"
     Write-Host "  tool-events   Toast on tool events"
-    Write-Host "  complete-push Push to phone on task-done"
+    Write-Host "  complete-push Push to Telegram on task-done"
     Write-Host ""
     exit 0
 }
@@ -173,8 +320,8 @@ if ($Status) {
     Write-Status "  On-stop            " $cfg.hooks.on_stop
     Write-Status "  On-tool-use        " $cfg.hooks.on_tool_use
     Write-Status "  Tool details       " $cfg.announcements.tool_details
-    $topic = if ($cfg.mobile.ntfy_topic) { $cfg.mobile.ntfy_topic } else { "(not set)" }
-    Write-Host "    ntfy topic: $topic" -ForegroundColor DarkGray
+    $tgStatus = if ($cfg.mobile.telegram_chat_id) { "connected (chat $($cfg.mobile.telegram_chat_id))" } else { "(not set — run --setup-telegram)" }
+    Write-Host "    Telegram: $tgStatus" -ForegroundColor DarkGray
     Write-Host ""
     exit 0
 }
@@ -299,12 +446,6 @@ if ($Toggle) {
     Write-Host "$label $state." -ForegroundColor $color; exit 0
 }
 
-if ($SetTopic) {
-    $cfg = Get-Config
-    $cfg.mobile.ntfy_topic = $SetTopic; $cfg.mobile.enabled = $true; Save-Config $cfg
-    Write-Host "Mobile topic: $SetTopic" -ForegroundColor Green
-    Write-Host "Subscribe at: $($cfg.mobile.ntfy_server)/$SetTopic" -ForegroundColor Cyan; exit 0
-}
 
 if ($Voices) {
     Add-Type -AssemblyName System.Speech
