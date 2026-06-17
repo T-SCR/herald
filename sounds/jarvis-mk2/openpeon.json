@@ -1,9 +1,9 @@
-﻿{
+{
     "cesp_version":  "1.0",
     "name":  "jarvis-mk2",
     "display_name":  "J.A.R.V.I.S.",
-    "version":  "1.0.0",
-    "description":  "Paul Bettany-inspired AI butler. Calm, dry, never panicked. 40 lines of composure under absurdity.",
+    "version":  "1.1.0",
+    "description":  "Paul Bettany-inspired AI butler. Calm, composed, professional. 27 clean lines, zero sarcasm.",
     "author":  {
                    "name":  "FlynnCruse",
                    "github":  "FlynnCruse"
@@ -17,16 +17,6 @@
                                                                 "file":  "sounds/session_start_1.mp3",
                                                                 "label":  "Welcome home, sir.",
                                                                 "sha256":  "aed01bdf759f4580dae898da0134c458f0e20ca580016f06995d707bf1b9bf0f"
-                                                            },
-                                                            {
-                                                                "file":  "sounds/session_start_4.mp3",
-                                                                "label":  "Online. I see we\u0027re starting with an empty file. Bold choice.",
-                                                                "sha256":  "e307f32a4424e015625b85d4fc05b2a5f284d6b53654e2ec246ffdcfb2f993f3"
-                                                            },
-                                                            {
-                                                                "file":  "sounds/session_start_5.mp3",
-                                                                "label":  "Ready. I\u0027ll be here, quietly not commenting on the hour.",
-                                                                "sha256":  "f92a81fec07fa4e2416b144e733fe5fadd916861a8eb57d4d43e461277728c6b"
                                                             }
                                                         ]
                                          },
@@ -54,7 +44,7 @@
                                                                },
                                                                {
                                                                    "file":  "sounds/acknowledge_8.mp3",
-                                                                   "label":  "I have the task. I\u0027ll let you know when that changes.",
+                                                                   "label":  "I have the task. I'll let you know when that changes.",
                                                                    "sha256":  "ec987b76d3508c2d8d69932d254d5ab8fbe3b6c659244bbac99453233ef67c41"
                                                                }
                                                            ]
@@ -65,21 +55,6 @@
                                                                 "file":  "sounds/complete_1.mp3",
                                                                 "label":  "All wrapped up here, sir. Will there be anything else?",
                                                                 "sha256":  "f5b6a9255d737fa4e77f6e038a4066d38e172f1e8f7597b3910de85ef873ecbc"
-                                                            },
-                                                            {
-                                                                "file":  "sounds/complete_4.mp3",
-                                                                "label":  "Done. Whether it\u0027s correct is, of course, a separate matter.",
-                                                                "sha256":  "82418985719443e30fa2c61cd2aea3b28e3b79263a5f22d398d9a7061063f036"
-                                                            },
-                                                            {
-                                                                "file":  "sounds/complete_5.mp3",
-                                                                "label":  "Finished. I\u0027ll be here if you\u0027d like to immediately undo it.",
-                                                                "sha256":  "4fb5393d9090dc06e3d97377e05eb4fd637c95b7babc9001694f44faee27a719"
-                                                            },
-                                                            {
-                                                                "file":  "sounds/complete_6.mp3",
-                                                                "label":  "Complete. You may now pretend you knew it would work.",
-                                                                "sha256":  "553bb15c7e476ebac44af8e4f0d7d95046b27ad8e095700cd3d6016f63609d90"
                                                             }
                                                         ]
                                          },
@@ -87,7 +62,7 @@
                                           "sounds":  [
                                                          {
                                                              "file":  "sounds/error_2.mp3",
-                                                             "label":  "That didn\u0027t work.",
+                                                             "label":  "That didn't work.",
                                                              "sha256":  "ad71b79e8ed4c4d9c9859cfe916f117cb5890baccd5fa05a3ca0452cc134f6e5"
                                                          },
                                                          {
@@ -96,18 +71,8 @@
                                                              "sha256":  "472913d22d86b6601640c706aac2709644569d1539e145906bdcea2dd2a0d037"
                                                          },
                                                          {
-                                                             "file":  "sounds/error_5.mp3",
-                                                             "label":  "Error. I\u0027d say unexpected, but I don\u0027t want to be dishonest.",
-                                                             "sha256":  "819e5d5ebd0d7ee735f440324640651f3fefd3d771b4189831546f448fd8ddec"
-                                                         },
-                                                         {
-                                                             "file":  "sounds/error_6.mp3",
-                                                             "label":  "That\u0027s broken. Which does narrow things down considerably.",
-                                                             "sha256":  "045eef1869b0c8547766542708735a4e6cbf7c47342d48f703716d334c103b6c"
-                                                         },
-                                                         {
                                                              "file":  "sounds/error_7.mp3",
-                                                             "label":  "It didn\u0027t go as planned. These things rarely do, at this hour.",
+                                                             "label":  "It didn't go as planned. These things rarely do.",
                                                              "sha256":  "d621e87eaf41aa527cc8005ab4549b658f11d840d337da4529e4584ea4f6c40f"
                                                          }
                                                      ]
@@ -121,23 +86,18 @@
                                                              },
                                                              {
                                                                  "file":  "sounds/input_3.mp3",
-                                                                 "label":  "Whenever you\u0027re ready. I\u0027ll simply be here.",
+                                                                 "label":  "Whenever you're ready. I'll simply be here.",
                                                                  "sha256":  "a78c7886ae3299f908366eb494749c4472d702c68f2f5f11700a63aad47e6b59"
                                                              },
                                                              {
                                                                  "file":  "sounds/input_4.mp3",
-                                                                 "label":  "This one requires you, I\u0027m afraid. I\u0027ve taken it as far as I can.",
+                                                                 "label":  "This one requires you, I'm afraid. I've taken it as far as I can.",
                                                                  "sha256":  "61cccbc509b22cf5e090346880d109e178fffd6365a5651a003cc022f28190c0"
                                                              },
                                                              {
                                                                  "file":  "sounds/input_5.mp3",
-                                                                 "label":  "I\u0027m waiting on a decision. No urgency â€” except there is, rather.",
+                                                                 "label":  "I'm waiting on a decision. Your attention is needed.",
                                                                  "sha256":  "e419af29d8824836705f1b7c20359e93f9c41c181e6f31260da021503e24c174"
-                                                             },
-                                                             {
-                                                                 "file":  "sounds/input_7.mp3",
-                                                                 "label":  "Still here. Still waiting. No judgment whatsoever.",
-                                                                 "sha256":  "6854dc8265714ab11596e7341af8cb82d020ea1805d5badd821d2df69cf04e1a"
                                                              },
                                                              {
                                                                  "file":  "sounds/input_8.mp3",
@@ -146,17 +106,12 @@
                                                              },
                                                              {
                                                                  "file":  "sounds/input_9.mp3",
-                                                                 "label":  "I\u0027ve done my part. The rest is yours.",
+                                                                 "label":  "I've done my part. The rest is yours.",
                                                                  "sha256":  "69be687801ecf1227bc8285ca67d7f178e1ed879afe3465d86e631d88355bf4f"
                                                              },
                                                              {
-                                                                 "file":  "sounds/input_10.mp3",
-                                                                 "label":  "A decision is required. I\u0027d make it myself, but that\u0027s not how this works.",
-                                                                 "sha256":  "ae2704a1bdb7602a9162e57d52c5dbd97376782e0dce4127fe5d144009d267b1"
-                                                             },
-                                                             {
                                                                  "file":  "sounds/input_11.mp3",
-                                                                 "label":  "You\u0027re needed. Specifically, here. Specifically, now.",
+                                                                 "label":  "You're needed. Specifically, here. Specifically, now.",
                                                                  "sha256":  "d0fa6d6cbadfb3c3692b2af0da7ba4a16ab0a7f10b64cc914d6dde1ea63bc639"
                                                              },
                                                              {
@@ -181,7 +136,7 @@
                                                              },
                                                              {
                                                                  "file":  "sounds/input_22.mp3",
-                                                                 "label":  "Authorization required. That\u0027s yours to give, not mine.",
+                                                                 "label":  "Authorization required. That's yours to give, not mine.",
                                                                  "sha256":  "4bbb5071b2e24ab1c28c5cfd459d9617921a6c36f3a4c902c5af9fc988e6b0e1"
                                                              },
                                                              {
@@ -193,11 +148,6 @@
                                                                  "file":  "sounds/input_27.mp3",
                                                                  "label":  "Holding. Your input would be most welcome, sir.",
                                                                  "sha256":  "67546d657c2408016526efcd783f4480ce16584b7e556dee9c844b8de3a07b31"
-                                                             },
-                                                             {
-                                                                 "file":  "sounds/input_28.mp3",
-                                                                 "label":  "I find myself unable to continue without you. I\u0027ll admit, it\u0027s a rare feeling.",
-                                                                 "sha256":  "9d5a74c3c62ac3110a9882153a870eb948ffd51d80675a43f62306ab30947bef"
                                                              }
                                                          ]
                                           },
@@ -205,17 +155,12 @@
                                               "sounds":  [
                                                              {
                                                                  "file":  "sounds/resource_2.mp3",
-                                                                 "label":  "We\u0027re running low on capacity. Worth knowing.",
+                                                                 "label":  "We're running low on capacity. Worth knowing.",
                                                                  "sha256":  "8ab0429b7bf9bb25156d69f854bdba1f42c695663753b54fba3d971a6addddf4"
                                                              },
                                                              {
-                                                                 "file":  "sounds/resource_3.mp3",
-                                                                 "label":  "Resources are becoming a constraint. I mention this while there\u0027s still time to care.",
-                                                                 "sha256":  "27da3f69ae64ceedc4ea461da513c4aebeb8d53f56af5e6f12c749891ce1b819"
-                                                             },
-                                                             {
                                                                  "file":  "sounds/resource_5.mp3",
-                                                                 "label":  "I\u0027d suggest some economy of scope. We\u0027re not running on unlimited.",
+                                                                 "label":  "I'd suggest some economy of scope. We're not running on unlimited.",
                                                                  "sha256":  "be44c8dbd0aa5b58bdf4b3b54c264d0b1c091f2a11ca9b445a1b1aca908d8a1f"
                                                              }
                                                          ]
@@ -226,16 +171,6 @@
                                                             "file":  "sounds/spam_3.mp3",
                                                             "label":  "Still working. Your enthusiasm is noted.",
                                                             "sha256":  "c28744951ec6fb0635c40b721885358201fc0a0abe05b920270ed0909b229457"
-                                                        },
-                                                        {
-                                                            "file":  "sounds/spam_5.mp3",
-                                                            "label":  "I am aware. I remain aware. I will continue to be aware.",
-                                                            "sha256":  "5ccb5c64bb7ebeeafd1c0341fa10fafaa8ea4623d441b22b8308e9984d712e1c"
-                                                        },
-                                                        {
-                                                            "file":  "sounds/spam_6.mp3",
-                                                            "label":  "If I had news, you\u0027d have it. I don\u0027t. You don\u0027t.",
-                                                            "sha256":  "48c543b2f28fbcf1d03d4a426dee59a2d63386b2daa64eb69a9a15dfc14c09b1"
                                                         }
                                                     ]
                                      }
